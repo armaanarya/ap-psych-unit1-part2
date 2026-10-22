@@ -2,7 +2,7 @@
 
 Quizlet Learn style study site for AP Psychology Unit 1, Part 2 (Modules 1.5a to 1.6d): consciousness, sleep, dreams, and sensation. Static, no build step.
 
-- **Learn** (`#/learn`): 151 definitions and 87 AP-style scenario questions in rounds of 7. Definitions go multiple choice first, then typed. Scenarios explain the answer. Missed items return later in the round. Exam weighting (on by default) draws each round about 60% sleep, 20% cognition (1.5a), 20% sensation.
+- **Learn** (`#/learn`): 151 definitions and 87 AP-style scenario questions in rounds of 7. All multiple choice, no typing: each definition is asked definition-to-term, then term-to-definition. Scenarios explain the answer. Missed items return later in the round. Exam weighting (on by default) draws each round about 60% sleep, 20% cognition (1.5a), 20% sensation.
 - **Flashcards** (`#/cards`): flip through the definitions by module.
 - **Review sheet** (`#/sheet`): the teacher's flagged topics, a hypnogram, and tables for stages, sleep in the brain, disorders, dream theories, and the senses.
 

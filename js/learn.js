@@ -1,5 +1,5 @@
-/* Learn mode, modeled on Quizlet Learn: rounds of 7. Definition items show as multiple choice first, then come back
-   as a typed answer; mastered after one of each (or two multiple-choice answers when typing is off).
+/* Learn mode, modeled on Quizlet Learn: rounds of 7, all multiple choice. Definition items first show the definition
+   and ask for the term, then come back the other way (term shown, pick the definition); mastered after one of each.
    Scenario items are multiple choice only: right on the first try is mastered, right after a miss needs one more.
    Missed items return later in the same round. */
 (function () {
@@ -14,7 +14,7 @@
   const BUCKET_W = { sleep: 60, cog: 20, sense: 20 };
   const bucketOf = x => SLEEP.includes(x.gid) ? 'sleep' : x.gid === 'con' ? 'cog' : 'sense';
 
-  let P = Object.assign({ levels: {}, topics: LEARN_GROUPS.map(g => g.id), typed: true, kinds: 'both', hotOnly: false, weighted: true },
+  let P = Object.assign({ levels: {}, topics: LEARN_GROUPS.map(g => g.id), kinds: 'both', hotOnly: false, weighted: true },
     store.get(KEY, {}));
   let R = null;   // current round
   const save = () => store.set(KEY, P);
@@ -23,49 +23,19 @@
 
   U.learnHotOnly = () => { P.hotOnly = true; P.topics = LEARN_GROUPS.map(g => g.id); P.kinds = 'both'; R = null; save(); };
 
-  // ---------- answer checking for typed rounds ----------
-  const norm = s => s.toLowerCase().replace(/&/g, ' and ').replace(/[^a-z0-9]+/g, ' ').trim().replace(/^(the|a|an) /, '');
-  const sing = s => s.split(' ').map(w => w.length > 3 ? w.replace(/(es|s)$/, '') : w).join(' ');
-  function forms(item) {
-    const out = new Set();
-    [item.term, ...item.alts].forEach(f => {
-      out.add(norm(f));
-      out.add(norm(f.replace(/\([^)]*\)/g, ' ')));      // "NREM-3 (N3)" -> "nrem 3"
-      const inner = f.match(/\(([^)]*)\)/);
-      if (inner && inner[1].length > 2) out.add(norm(inner[1]));
-    });
-    out.delete('');
-    return [...out];
-  }
-  function lev(a, b) {
-    const d = Array.from({ length: a.length + 1 }, (_, i) => [i]);
-    for (let j = 1; j <= b.length; j++) d[0][j] = j;
-    for (let i = 1; i <= a.length; i++) for (let j = 1; j <= b.length; j++)
-      d[i][j] = Math.min(d[i - 1][j] + 1, d[i][j - 1] + 1, d[i - 1][j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
-    return d[a.length][b.length];
-  }
-  function typedOk(item, answer) {
-    const a = norm(answer);
-    if (!a) return false;
-    return forms(item).some(f => {
-      if (a === f || sing(a) === sing(f)) return true;
-      // Numbers carry meaning here (N1 vs N3), so never forgive a wrong digit.
-      if (/\d/.test(f) && a.replace(/\D/g, '') !== f.replace(/\D/g, '')) return false;
-      const tol = f.length >= 10 ? 2 : f.length >= 5 ? 1 : 0;
-      return tol > 0 && lev(sing(a), sing(f)) <= tol;
-    });
-  }
+  // The correct answer's text for this question type: the term, or the definition on the reverse pass.
+  const answerOf = (item, type) => type === 'rev' ? item.prompt : item.term;
 
-  function mcOptions(item) {
+  function mcOptions(item, type) {
     if (item.kind === 'apply') return shuffle([item.term, ...item.wrong]);
     const seen = new Set([item.term]);
     const picks = [];
     const terms = ITEMS.filter(x => x.kind === 'term');
-    const addFrom = list => shuffle(list).forEach(x => { if (picks.length < 3 && !seen.has(x.term)) { seen.add(x.term); picks.push(x.term); } });
+    const addFrom = list => shuffle(list).forEach(x => { if (picks.length < 3 && !seen.has(x.term)) { seen.add(x.term); picks.push(x); } });
     addFrom(terms.filter(x => x.gid === item.gid));
     addFrom(terms.filter(x => x.mod === item.mod));
     addFrom(terms);
-    return shuffle([item.term, ...picks]);
+    return shuffle([item, ...picks].map(x => answerOf(x, type)));
   }
 
   // ---------- rounds ----------
@@ -103,8 +73,8 @@
     if (!R.queue.length) { R.cur = null; return renderSummary(); }
     const id = R.queue.shift();
     const item = BY_ID[id];
-    const type = item.kind === 'term' && lvl(id) >= 1 && P.typed ? 'typed' : 'mc';
-    R.cur = { id, type, options: type === 'mc' ? mcOptions(item) : null, answered: false };
+    const type = item.kind === 'term' && lvl(id) >= 1 ? 'rev' : 'mc';
+    R.cur = { id, type, options: mcOptions(item, type), answered: false };
     renderCard();
   }
 
@@ -146,7 +116,7 @@
       <section class="hero">
         <p class="eyebrow">Learn · ${ITEMS.length} items</p>
         <h1>Learn it until it sticks</h1>
-        <p class="lede">Rounds of ${ROUND}. Definitions start as multiple choice; once you get one, it comes back and you type the term. Scenario questions are written like AP multiple choice and explain every answer. Miss anything and it returns later in the round.</p>
+        <p class="lede">Rounds of ${ROUND}. Definitions show the definition and ask for the term; once you get one, it comes back the other way, showing the term and asking for its definition. Scenario questions are written like AP multiple choice and explain every answer. Miss anything and it returns later in the round.</p>
       </section>
       <div class="panel">
         <div class="row">
@@ -161,9 +131,7 @@
         }).join('')}</div>
         <div class="row small"><button class="chip" id="allTopics">Select all</button><button class="chip" id="sleepTopics">Sleep only (1.5b, 1.5c)</button><button class="chip" id="cogTopics">Cognition only (1.5a)</button><button class="chip" id="senseTopics">Sensation only (1.6)</button><button class="chip" id="noTopics">Clear</button></div>
         <div class="row small" style="margin-top:10px">
-          <label class="toggle"><input type="checkbox" id="weightTog" ${P.weighted ? 'checked' : ''}> Exam weighting: rounds are about 60% sleep, 20% cognition, 20% sensation</label>
-          <span class="spacer"></span>
-          <label class="toggle"><input type="checkbox" id="typedTog" ${P.typed ? 'checked' : ''}> Typed answers after multiple choice</label></div>
+          <label class="toggle"><input type="checkbox" id="weightTog" ${P.weighted ? 'checked' : ''}> Exam weighting: rounds are about 60% sleep, 20% cognition, 20% sensation</label></div>
         <div style="margin-top:14px">${progressBar(list)}</div>
         <div class="row" style="margin-top:16px">
           <button class="btn" id="startLearn" ${list.length && !allDone ? '' : 'disabled'}>${!list.length ? 'Nothing selected' : allDone ? 'Everything here is mastered' : Object.keys(P.levels).length ? 'Continue learning' : 'Start learning'}</button>
@@ -183,7 +151,6 @@
     $('#weightTog').onchange = e => { P.weighted = e.target.checked; save(); };
     $('#senseTopics').onclick = () => setTopics(LEARN_GROUPS.filter(g => g.mod.startsWith('1.6')).map(g => g.id));
     $('#noTopics').onclick = () => setTopics([]);
-    $('#typedTog').onchange = e => { P.typed = e.target.checked; save(); };
     $('#resetLearn').onclick = () => {
       if (!confirm('Reset your progress for the selected items?')) return;
       pool().forEach(x => delete P.levels[x.id]); save(); renderSetup();
@@ -195,61 +162,41 @@
     const c = R.cur, item = BY_ID[c.id], g = GROUP[item.gid];
     const done = R.items.filter(id => R.first[id] !== undefined && lvl(id) > 0 && !R.queue.includes(id)).length;
     const isApply = item.kind === 'apply';
-    let body = '';
-    if (c.type === 'mc') {
-      body = `<div class="lopts ${isApply ? 'one' : ''}">${c.options.map((o, k) => {
+    const answer = answerOf(item, c.type);
+    const body = `<div class="lopts ${isApply || c.type === 'rev' ? 'one' : ''}">${c.options.map((o, k) => {
         let cls = '';
-        if (c.answered) { if (o === item.term) cls = 'ok'; else if (o === c.given) cls = 'bad'; }
+        if (c.answered) { if (o === answer) cls = 'ok'; else if (o === c.given) cls = 'bad'; }
         return `<button class="${cls}" data-opt="${esc(o)}" ${c.answered ? 'disabled' : ''}><span class="k">${k + 1}</span><span>${esc(o)}</span></button>`;
       }).join('')}</div>
       ${c.answered ? '' : '<div class="row" style="margin-top:10px"><button class="btn ghost" id="dunno" type="button">I don\'t know</button></div>'}`;
-    } else {
-      body = `<form class="typed" id="typedForm" autocomplete="off">
-          <input id="typedIn" type="text" placeholder="Type the term" ${c.answered ? 'disabled' : ''} value="${c.answered ? esc(c.given || '') : ''}" aria-label="Your answer">
-          ${c.answered ? '' : '<button class="btn" type="submit">Answer</button>'}
-        </form>
-        ${c.answered ? '' : '<div class="row" style="margin-top:8px"><button class="btn ghost" id="dunno" type="button">I don\'t know</button></div>'}`;
-    }
     let fb = '';
     if (c.answered) {
       const why = isApply ? `<p class="why2">${esc(item.why)}</p>` : '';
       fb = c.ok
-        ? `<div class="lfeed ok"><div class="head">${lvl(c.id) >= 2 ? 'Correct. Mastered.' : isApply ? 'Correct. Get it once more to master it.' : 'Correct. It will come back as a typed question.'}</div>${isApply ? why : `<div class="ans">${esc(item.term)}</div>`}</div>`
+        ? `<div class="lfeed ok"><div class="head">${lvl(c.id) >= 2 ? 'Correct. Mastered.' : isApply ? 'Correct. Get it once more to master it.' : 'Correct. It will come back the other way: term first, pick the definition.'}</div>${why}</div>`
         : `<div class="lfeed bad"><div class="head">${c.given ? 'Not quite.' : 'Here it is.'} You will see this again.</div>
-            <div>Correct answer: <span class="ans">${esc(item.term)}</span></div>
-            ${c.given && c.type === 'typed' ? `<div class="small mut">You answered: ${esc(c.given)}</div>` : ''}${why}</div>`;
+            <div>Correct answer: <span class="ans">${esc(answer)}</span></div>${why}</div>`;
     }
+    const kind = isApply ? 'Scenario' : c.type === 'rev' ? 'Term · pick the definition' : 'Definition · pick the term';
     app.innerHTML = `
     <main class="screen"><div class="learnwrap">
       <div class="row"><a href="#/learn" id="exitLearn" class="small">End round</a><span class="spacer"></span><span class="small mut">Round progress: ${done} of ${R.items.length}</span></div>
       ${progressBar(pool())}
       <div class="lcard">
-        <div class="kind"><span>${isApply ? 'Scenario' : c.type === 'mc' ? 'Definition · multiple choice' : 'Definition · type the term'}</span><span>·</span><span>${item.mod} ${esc(g.name)}</span>${item.hot ? '<span class="hotbadge">Teacher flagged</span>' : ''}</div>
-        <p class="prompt ${isApply ? 'apply' : ''}">${esc(item.prompt)}</p>
+        <div class="kind"><span>${kind}</span><span>·</span><span>${item.mod} ${esc(g.name)}</span>${item.hot ? '<span class="hotbadge">Teacher flagged</span>' : ''}</div>
+        <p class="prompt ${isApply ? 'apply' : c.type === 'rev' ? 'termq' : ''}">${esc(c.type === 'rev' ? item.term : item.prompt)}</p>
         ${body}
         ${fb}
-        ${c.answered ? `<div class="lfoot"><button class="btn" id="contBtn">Continue</button><span class="small mut">Press Enter</span>
-          ${!c.ok && c.type === 'typed' && c.given ? '<span class="spacer"></span><button class="btn ghost" id="overrideBtn">I was right, count it</button>' : ''}</div>` : ''}
+        ${c.answered ? '<div class="lfoot"><button class="btn" id="contBtn">Continue</button><span class="small mut">Press Enter</span></div>' : ''}
       </div>
     </div></main>`;
     $('#exitLearn').onclick = e => { e.preventDefault(); R = null; renderSetup(); };
     if (!c.answered) {
       $('#dunno').onclick = () => grade(false, '');
-      if (c.type === 'mc') $$('[data-opt]').forEach(b => b.onclick = () => grade(b.dataset.opt === item.term, b.dataset.opt));
-      else {
-        const inp = $('#typedIn'); inp.focus();
-        $('#typedForm').onsubmit = e => { e.preventDefault(); const v = inp.value; if (!v.trim()) return; grade(typedOk(item, v), v.trim()); };
-      }
+      $$('[data-opt]').forEach(b => b.onclick = () => grade(b.dataset.opt === answer, b.dataset.opt));
     } else {
       const cont = $('#contBtn'); cont.focus();
       cont.onclick = () => nextQuestion();
-      const ov = $('#overrideBtn');
-      if (ov) ov.onclick = () => {
-        // Undo the miss: count it as correct and drop the repeat from the queue.
-        const idx = R.queue.lastIndexOf(c.id); if (idx >= 0) R.queue.splice(idx, 1);
-        R.first[c.id] = true; P.levels[c.id] = Math.min(2, lvl(c.id) + 1); save();
-        c.ok = true; renderCard();
-      };
     }
   }
 
@@ -279,7 +226,7 @@
   document.addEventListener('keydown', e => {
     if (document.body.dataset.route !== 'learn' || !R || !R.cur) return;
     const c = R.cur;
-    if (!c.answered && c.type === 'mc' && /^[1-4]$/.test(e.key)) {
+    if (!c.answered && /^[1-4]$/.test(e.key)) {
       const b = $$('[data-opt]')[Number(e.key) - 1]; if (b) b.click();
     } else if (c.answered && e.key === 'Enter' && document.contains(e.target) && !(e.target.closest && e.target.closest('button'))) {
       e.preventDefault(); nextQuestion();

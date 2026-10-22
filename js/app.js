@@ -62,7 +62,7 @@
       </section>
       <section class="cards">
         <a class="card" href="#/learn"><span class="tag">Quizlet Learn style</span><h3>Learn</h3>
-          <p>${terms} definitions and ${apply} AP-style scenario questions in rounds of 7. Definitions come back as typed answers once you get them right. Misses return later in the round.</p>
+          <p>${terms} definitions and ${apply} AP-style scenario questions in rounds of 7. All multiple choice: each definition comes back flipped (term first, pick the definition) once you get it. Misses return later in the round.</p>
           <span class="go">Start learning</span></a>
         <a class="card" href="#/learn" id="hotCard"><span class="tag">From your teacher's notes</span><h3>Flagged topics only</h3>
           <p>${hot} items on what your teacher called out: the hypothalamus, pituitary, pineal gland, and thalamus in sleep; the irregular heartbeat in REM; sleep paralysis during REM; kinesthesis vs. vestibular.</p>

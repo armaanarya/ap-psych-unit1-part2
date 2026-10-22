@@ -305,9 +305,6 @@ a.card:hover { border-color: var(--acc); }
 .lopts button.ok { border-color: var(--ok); background: var(--ok-bg); }
 .lopts button.bad { border-color: var(--bad); background: var(--bad-bg); }
 .lopts button:disabled { cursor: default; }
-.typed { display: flex; gap: 10px; }
-.typed input { flex: 1; border: 1.5px solid var(--line); border-radius: 10px; padding: 11px 13px; background: var(--panel); font-size: 1.05rem; }
-.typed input:focus { outline: none; border-color: var(--acc); }
 .lfeed { margin-top: 16px; border-radius: 12px; padding: 12px 14px; }
 .lfeed.ok { background: var(--ok-bg); }
 .lfeed.bad { background: var(--bad-bg); }
@@ -545,3 +542,4 @@ svg.brain.interactive .lbl text { pointer-events: auto; cursor: pointer; }
 .hypno .trace { fill: none; stroke: var(--acc); stroke-width: 2.5; stroke-linejoin: round; }
 .hypno .rem { fill: var(--warn-bg); stroke: var(--warn); stroke-width: 1; }
 .steps-inline { background: var(--panel-2); border-radius: 10px; padding: 10px 12px; }
+.lcard .prompt.termq { font-size: 1.7rem; font-weight: 600; }

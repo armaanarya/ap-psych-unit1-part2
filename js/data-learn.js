@@ -1,4 +1,4 @@
-/* Learn-mode definition bank. Each item: [answer term, prompt shown to you, extra accepted spellings, hot].
+/* Learn-mode definition bank. Each item: [term, definition, alternate names, hot].
    hot = 1 marks items tied to the teacher's review notes (sleep brain structures, REM body changes,
    sleep paralysis, kinesthesis, vestibular sense). Wrong choices come from other terms in the same group.
    Wording follows Myers' Psychology for AP, 4th edition (Modules 1.5a to 1.6d). */
